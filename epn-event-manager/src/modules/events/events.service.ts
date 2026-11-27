@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -53,8 +53,8 @@ export class EventsService {
   async registerEvent(dto: CreateEventDto): Promise<{ ok: boolean }> {
     const action = (dto.action ?? '').toUpperCase();
     const payloadStr = JSON.stringify(dto.payload ?? {});
-    // Fecha guardada en formato local, no UTC (debilidad intencional)
-    const localDate = new Date().toLocaleString();
+    // Adaptativo: fecha en UTC con formato ISO 8601 (no depende de la PC)
+    const nowUtc = new Date().toISOString();
 
     if (action === 'CREATE') {
       const ev = this.createRepo.create({
@@ -64,7 +64,7 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        recorded_at: localDate,
+        recorded_at: nowUtc,
       });
       await this.createRepo.save(ev);
       return { ok: true };
@@ -78,23 +78,24 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        timestamp: localDate,
+        timestamp: nowUtc,
       });
       await this.updateRepo.save(ev);
       return { ok: true };
     }
 
     if (action === 'DELETE') {
-      // BUG INTENCIONAL (correctivo): se construye el objeto pero se devuelve
-      // exito antes de persistirlo. El save nunca se ejecuta.
-      this.deleteRepo.create({
+      const evento = this.deleteRepo.create({
         source: dto.source,
         entity: dto.entity,
         action: dto.action,
         title: dto.title,
+        description: dto.description,
         payload: payloadStr,
-        createdAt: localDate,
+        createdAt: nowUtc,
       });
+
+      await this.deleteRepo.save(evento);
       return { ok: true };
     }
 
@@ -106,13 +107,15 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        event_date: localDate,
+        event_date: nowUtc,
       });
       await this.queryRepo.save(ev);
       return { ok: true };
     }
 
-    return { ok: false };
+    throw new BadRequestException(
+      'Acción no soportada. Usa CREATE, UPDATE, DELETE o QUERY.',
+    );
   }
 
   async findAll(): Promise<object[]> {
