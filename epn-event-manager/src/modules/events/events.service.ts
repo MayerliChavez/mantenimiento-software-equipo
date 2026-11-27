@@ -60,6 +60,7 @@ export class EventsService {
         entity: dto.entity,
         action: dto.action,
         title: dto.title,
+        description: dto.description,
         payload: payloadStr,
         createdAt: localDate,
       });
