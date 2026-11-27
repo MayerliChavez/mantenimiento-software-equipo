@@ -23,8 +23,8 @@ export class EventsService {
   async registerEvent(dto: CreateEventDto): Promise<{ ok: boolean }> {
     const action = (dto.action ?? '').toUpperCase();
     const payloadStr = JSON.stringify(dto.payload ?? {});
-    // Fecha guardada en formato local, no UTC (debilidad intencional)
-    const localDate = new Date().toLocaleString();
+    // Adaptativo: fecha en UTC con formato ISO 8601 (no depende de la PC)
+    const nowUtc = new Date().toISOString();
 
     if (action === 'CREATE') {
       const ev = this.createRepo.create({
@@ -34,7 +34,7 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        recorded_at: localDate,
+        recorded_at: nowUtc,
       });
       await this.createRepo.save(ev);
       return { ok: true };
@@ -48,7 +48,7 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        timestamp: localDate,
+        timestamp: nowUtc,
       });
       await this.updateRepo.save(ev);
       return { ok: true };
@@ -62,7 +62,7 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        createdAt: localDate,
+        createdAt: nowUtc,
       });
 
       await this.deleteRepo.save(evento);
@@ -77,7 +77,7 @@ export class EventsService {
         title: dto.title,
         description: dto.description,
         payload: payloadStr,
-        event_date: localDate,
+        event_date: nowUtc,
       });
       await this.queryRepo.save(ev);
       return { ok: true };
